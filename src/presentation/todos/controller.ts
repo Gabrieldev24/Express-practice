@@ -1,6 +1,7 @@
 import { Request, Response } from "express"
 
 import { prisma } from "../../data/postgres"
+import { CreateTodoDto, UpdateTodoDto } from "../../domain/dtos"
 
 const todos = [
                   {id:1, text:'Buy Milk', completedAt: new Date()},
@@ -42,14 +43,13 @@ export class TodosController{
     }
     public createTodo = async (req:Request, res: Response) =>{
 
-
-        const {text} = req.body
-        if(!text) return res.status(400).json({error: 'Text property is required'})
+        const [error, createTodoDto] = CreateTodoDto.create(req.body)
+        if(error) return res.status(400).json({error})
+        
+        // if(!text) return res.status(400).json({error: 'Text property is required'})
         
         const todo = await prisma.todo.create({
-            data:{
-                text:text,
-            }
+            data: createTodoDto!
         });
         console.log('creado')
         res.json(todo)
@@ -59,31 +59,29 @@ export class TodosController{
     public updateTodo = async (req:Request, res: Response) =>{
 
         const id = +req.params.id!;
+        const [error,updateTodoDto] = UpdateTodoDto.update({...req.body, id})
+
+        if(error) return res.status(404).json({error})
+        
+
+        
         if(isNaN(id)) return res.status(400).json({error:'El id debe ser un numero'})
         
-        // const todo = todos.find(e=> e.id === id)
+   
 
         const todos = await prisma.todo.findMany({where:{id}})
         if(!todos) return res.status(404).json({error:`id : ${id} no encontrado`})
         
-        const {text, completedAt} = req.body;
+   
 
            const updateTodo = await prisma.todo.update({
             where:{id},
-            data: {
-                text:text,
-                completedAt:(completedAt)? new Date(completedAt) : null
-            }
+            data: updateTodoDto!.values
+                
+              
+            
         });
      
-
-        // (completedAt== null) ? todos.completedAt = null : todos.completedAt = new Date(completedAt || todo.completedAt)
-
-
-        if(!text) return res.status(404).json({error:'text is required'})
-        // todo.text = text;
-        // todo.text = text || todo.text
-        // todo.createdAt = createdAt || todo.createdAt
 
         res.json(updateTodo)
 
